@@ -2,7 +2,9 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"net"
+	"os"
 )
 
 func main() {
@@ -13,19 +15,26 @@ func main() {
 	}
 	defer l.Close()
 
-	conn, err := l.Accept()
-	if err != nil {
-		fmt.Println("Could not listen to request: ", err)
-		return
-	}
-	defer conn.Close()
 	for {
-		buf := make([]byte, 1024)
-
-		_, err := conn.Read(buf)
+		conn, err := l.Accept()
 		if err != nil {
-			fmt.Println("")
+			fmt.Println("Could not listen to request: ", err)
 			return
 		}
+		defer conn.Close()
+
+		buf := make([]byte, 1024)
+
+		_, err = conn.Read(buf)
+		if err != nil {
+			if err == io.EOF {
+
+				break
+			}
+			fmt.Println("Error reading from client", err.Error())
+			os.Exit(1)
+		}
+
+		conn.Write([]byte("+OK\r\n"))
 	}
 }
