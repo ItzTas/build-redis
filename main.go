@@ -28,7 +28,6 @@ func main() {
 		_, err = conn.Read(buf)
 		if err != nil {
 			if err == io.EOF {
-
 				break
 			}
 			fmt.Println("Error reading from client", err.Error())
