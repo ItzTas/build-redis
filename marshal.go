@@ -1,6 +1,8 @@
 package main
 
-import "strconv"
+import (
+	"strconv"
+)
 
 func (v Value) Marshal() []byte {
 	switch v.typ {
@@ -33,6 +35,31 @@ func (v Value) marshalBulk() []byte {
 	bytes = append(bytes, strconv.Itoa(len(v.bulk))...)
 	bytes = append(bytes, '\r', '\n')
 	bytes = append(bytes, v.bulk...)
+	bytes = append(bytes, '\r', '\n')
+	return bytes
+}
+
+func (v Value) marshalArray() []byte {
+	len := len(v.array)
+	var bytes []byte
+	bytes = append(bytes, ARRAY)
+	bytes = append(bytes, strconv.Itoa(len)...)
+	bytes = append(bytes, '\r', '\n')
+	for i := 0; i < len; i++ {
+		bytes = append(bytes, v.array[i].Marshal()...)
+	}
+
+	return bytes
+}
+
+func (v Value) marshallNull() []byte {
+	return []byte("$-1\r\n")
+}
+
+func (v Value) marshallError() []byte {
+	var bytes []byte
+	bytes = append(bytes, ERROR)
+	bytes = append(bytes, v.str...)
 	bytes = append(bytes, '\r', '\n')
 	return bytes
 }
