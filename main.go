@@ -14,24 +14,22 @@ func main() {
 		return
 	}
 
-	conn, err := l.Accept()
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-
-	defer conn.Close()
-
 	for {
-		resp := NewResp(conn)
-		value, err := resp.Read()
+		conn, err := l.Accept()
 		if err != nil {
 			fmt.Println(err)
 			return
 		}
 
-		fmt.Println(value)
+		defer conn.Close()
+		resp := NewResp(conn)
+		_, err = resp.Read()
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
 
-		conn.Write([]byte("+OK\r\n"))
+		writer := NewWriter(conn)
+		writer.Write(Value{typ: "string", str: "OK"})
 	}
 }
