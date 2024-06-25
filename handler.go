@@ -13,10 +13,12 @@ var SETs = SetCmd{
 }
 
 var Handlers = map[string]func([]Value) Value{
-	"PING": ping,
-	"SET":  set,
-	"GET":  get,
-	"HSET": hset,
+	"PING":    ping,
+	"SET":     set,
+	"GET":     get,
+	"HSET":    hset,
+	"HGET":    hget,
+	"HGETALL": hgetall,
 }
 
 func ping(args []Value) Value {
@@ -88,4 +90,47 @@ func hset(args []Value) Value {
 	HSETs.HsetMap[category][key] = value
 
 	return Value{typ: "string", str: "OK"}
+}
+
+func hget(args []Value) Value {
+	if len(args) != 2 {
+		return Value{typ: "error", str: "ERR Wrong number of arguments"}
+	}
+
+	category := args[0].bulk
+	key := args[1].bulk
+
+	HSETs.MU.RLock()
+	defer HSETs.MU.RUnlock()
+
+	value, ok := HSETs.HsetMap[category][key]
+	if !ok {
+		return Value{typ: "null"}
+	}
+
+	return Value{typ: "bulk", bulk: value}
+}
+
+func hgetall(args []Value) Value {
+	if len(args) != 1 {
+		return Value{typ: "error", str: "ERR Wrong number of arguments"}
+	}
+
+	category := args[0].bulk
+
+	HSETs.MU.RLock()
+	defer HSETs.MU.RUnlock()
+
+	value, ok := HSETs.HsetMap[category]
+	if !ok {
+		return Value{typ: "null"}
+	}
+
+	out := Value{typ: "array"}
+	for key, val := range value {
+		out.array = append(out.array, Value{typ: "bulk", bulk: key})
+		out.array = append(out.array, Value{typ: "bulk", bulk: val})
+	}
+
+	return out
 }
