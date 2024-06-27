@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"net"
 	"strings"
 )
@@ -15,13 +16,38 @@ func main() {
 		return
 	}
 
+	aof, err := NewAof("database.aof")
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	defer aof.Close()
+
+	err = aof.Read(func(value Value) {
+		command := strings.ToUpper(value.array[0].bulk)
+		args := value.array[1:]
+
+		handler, ok := Handlers[command]
+		if !ok {
+			fmt.Println("Invalid command: ", command)
+			return
+		}
+
+		handler(args)
+	})
+
+	if err != nil && err != io.EOF {
+		fmt.Println(err)
+		return
+	}
+
 	conn, err := l.Accept()
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
-
 	defer conn.Close()
+
 	for {
 		resp := NewResp(conn)
 		value, err := resp.Read()
@@ -52,7 +78,15 @@ func main() {
 			continue
 		}
 
+		if command == "SET" || command == "HSET" {
+			aof.Write(value)
+		}
+
 		result := handler(args)
-		writer.Write(result)
+		err = writer.Write(result)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
 	}
 }
